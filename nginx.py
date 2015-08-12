@@ -40,7 +40,7 @@ class Nginx(object):
                 metric.dispatch()
 
     def config(self, obj):
-        self.urls = dict((self.urls[node.key], node.values[0]) for node in obj.children)
+        self.urls = dict((node.key, node.values[0]) for node in obj.children)
 
 
 nginx = Nginx()
