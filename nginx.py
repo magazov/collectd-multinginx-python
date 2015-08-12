@@ -1,48 +1,48 @@
 #! /usr/bin/env python
 
 
-import collectd
 import re
 import urllib2
 
-class NutcrackerServer( object ):
+import collectd
+
+
+class Nginx(object):
     def __init__(self):
         self.pattern = re.compile("([A-Z][\w]*).+?(\d+)")
         self.urls = {}
 
-
-    def do_nginx_status( self ):
-        for instance, url in self.urls.iteritems():
+    def do_nginx_status(self):
+        for instance, url in self.urls.items():
             try:
                 response = urllib2.urlopen(url)
-            except urllib2.URLError, e:
-                collectd.error(str(e))
             except urllib2.HTTPError, e:
+                collectd.error(str(e))
+            except urllib2.URLError, e:
                 collectd.error(str(e))
             else:
                 data = response.read()
                 m = self.pattern.findall(data)
-                collectd.info(repr(m))
                 for key, value in m:
                     metric = collectd.Values()
-                    metric.plugin = 'nginx-%s'%instance
+                    metric.plugin = 'nginx-%s' % instance
                     metric.type_instance = key.lower()
                     metric.type = 'nginx_connections'
                     metric.values = [value]
                     metric.dispatch()
-                con = data.split('\n')[2].split()[-1]
-                collectd.info('Requests %s'%con)
+
+                requests = data.split('\n')[2].split()[-1]
+                collectd.debug('Requests %s' % requests)
                 metric = collectd.Values()
-                metric.plugin = 'nginx-%s'%instance
+                metric.plugin = 'nginx-%s' % instance
                 metric.type = 'nginx_requests'
-                metric.values = [con]
+                metric.values = [requests]
                 metric.dispatch()
 
-
     def config(self, obj):
-        for node in obj.children:
-            self.urls[node.key] = node.values[0]
+        self.urls = dict((node.key, node.values[0]) for node in obj.children)
 
-nginx = NutcrackerServer()
+
+nginx = Nginx()
 collectd.register_config(nginx.config)
 collectd.register_read(nginx.do_nginx_status)
